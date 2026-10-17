@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="@@NSX_LANG@@"@@NSX_THEME_ATTR@@>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>@@NSX_TITLE@@</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5.5.19/daisyui.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5.5.19/themes.css">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.2.4/dist/index.global.js"></script>
+<link rel="stylesheet" media="(prefers-color-scheme: light)"
+      href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github.min.css">
+<link rel="stylesheet" media="(prefers-color-scheme: dark)"
+      href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css">
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape@3.32.0/dist/cytoscape.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
+@@NSX_THEME_SCRIPT@@
+@@NSX_EXTRA_HEAD@@
+<style>
+  /* layout safety — nested grid/flex children must be allowed to shrink */
+  *, *::before, *::after { box-sizing: border-box; }
+  :where(.grid, .flex) > *,
+  :where([style*="display: grid"], [style*="display:grid"], [style*="display: flex"], [style*="display:flex"]) > * {
+    min-width: 0;
+  }
+  :where(p, h1, h2, h3, h4, h5, h6, li, dd, blockquote, figcaption, td, th, .badge, .label) {
+    overflow-wrap: anywhere;
+  }
+  :where(img, svg, video, canvas, iframe) { max-width: 100%; height: auto; }
+
+  main { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main p { margin: 0.6rem 0; line-height: 1.65; }
+  code, .ref, .ref-path, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+  /* feature tree — nested. Each level steps in by one guide, and a long
+     description wraps under its own text. The row shows that item's
+     description. A button's popover lists the source hunks on that item
+     and under it. Each hunk leads with a plain sentence of what that diff
+     does. Sửa is not yellow: the old text is red, the new text is green.
+     The badge stays one solid chip. A thin bar under the word runs
+     error → success, so the letters are not cut in half. */
+  .ftree-scroll {
+    max-inline-size: 100%;
+    min-inline-size: 0;
+  }
+  .ftree {
+    --ft-indent: 1.25rem;
+    --ft-arm: calc(0.7rem + 0.7em);
+    --ft-guide: color-mix(in oklch, currentColor 35%, transparent);
+    max-inline-size: 100%;
+    min-inline-size: 0;
+    padding-inline-start: var(--ft-indent);
+  }
+  .ftree, .ftree ul {
+    list-style: none;
+    margin: 0;
+    padding-block: 0;
+    padding-inline-end: 0;
+  }
+  .ftree ul { padding-inline-start: var(--ft-indent); }
+  .ftree li { overflow-wrap: normal; min-inline-size: 0; }
+  .ft-item { position: relative; min-inline-size: 0; }
+  .ft-item::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: calc(-1 * var(--ft-indent));
+    inset-block-start: 0;
+    inline-size: 1px;
+    block-size: 100%;
+    background: var(--ft-guide);
+    pointer-events: none;
+  }
+  .ft-item:last-child::before { block-size: var(--ft-arm); }
+  .ftree > .ft-item:first-child:not(:last-child)::before {
+    inset-block-start: var(--ft-arm);
+    block-size: calc(100% - var(--ft-arm));
+  }
+  .ftree > .ft-item:only-child::before {
+    inset-block-start: calc(var(--ft-arm) - 0.45rem);
+    block-size: 0.45rem;
+  }
+  .ft-row {
+    position: relative;
+    display: flex;
+    align-items: start;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  .ft-row::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: calc(-1 * var(--ft-indent));
+    inset-block-start: calc(var(--ft-arm) - 0.5px);
+    inline-size: calc(var(--ft-indent) - 0.35rem);
+    block-size: 1px;
+    background: var(--ft-guide);
+    pointer-events: none;
+  }
+  .ft-label, .ft-trigger {
+    font: inherit;
+    color: inherit;
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    white-space: normal;
+    overflow-wrap: break-word;
+    line-height: 1.4;
+  }
+  .ft-trigger {
+    appearance: none;
+    border: 0;
+    background: none;
+    text-align: start;
+    cursor: pointer;
+    padding-block: 0.7rem;
+    padding-inline: 0.2rem;
+    min-block-size: 2.75rem;
+    border-radius: 0.25rem;
+    text-decoration: underline dotted;
+    text-underline-offset: 0.18em;
+  }
+  .ft-trigger:focus-visible {
+    outline: max(2px, 0.08em) solid currentColor;
+    outline-offset: 0.25em;
+  }
+  .ft-trigger:active { transform: scale(0.97); }
+  @media (prefers-reduced-motion: no-preference) {
+    .ft-trigger { transition: transform 160ms var(--ease-out, ease-out); }
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .ft-trigger:hover { text-decoration-thickness: 2px; }
+  }
+  .ft-label.ft-added, .ft-trigger.ft-added { color: var(--color-success, #16a34a); }
+  .ft-label.ft-removed, .ft-trigger.ft-removed { color: var(--color-error, #dc2626); }
+  .ftree-badge { display: inline-block; font-size: .75rem; font-weight: 600;
+    padding: .1rem .6rem; border-radius: .5rem; }
+  .ftree-badge.ft-added    { background: var(--color-success, #16a34a); color: var(--color-success-content, #fff); }
+  .ftree-badge.ft-modified {
+    position: relative;
+    background-color: var(--color-base-300, #d1d5db);
+    background-image: none;
+    color: var(--color-base-content, CanvasText);
+    padding-block-end: .32rem;
+  }
+  .ftree-badge.ft-modified::after {
+    content: "";
+    position: absolute;
+    inset-inline: .4rem;
+    inset-block-end: .1rem;
+    block-size: 2px;
+    border-radius: 999px;
+    background: linear-gradient(to right,
+      var(--color-error, #dc2626),
+      var(--color-success, #16a34a));
+    pointer-events: none;
+  }
+  .ftree-badge.ft-removed  { background: var(--color-error,   #dc2626); color: var(--color-error-content,   #fff); }
+  .ftree-badge.ft-same     { background: var(--color-neutral, #64748b); color: var(--color-neutral-content, #fff); }
+  .ft-change.ft-added { color: var(--color-success, #16a34a); }
+  .ft-change.ft-removed { color: var(--color-error, #dc2626); }
+  .ft-old { color: var(--color-error, #dc2626); opacity: 1; }
+  .ft-new { color: var(--color-success, #16a34a); }
+  .ft-sep { opacity: .7; }
+  .ft-where { opacity: .75; }
+  del { opacity: .7; }
+  .ft-changes {
+    white-space: normal;
+    border: none;
+    padding: .75rem 1rem;
+    border-radius: .5rem;
+    background: var(--color-base-200, #eee);
+    color: var(--color-base-content, #111);
+    box-shadow: 0 4px 16px rgb(0 0 0 / .25);
+    inline-size: min(48rem, 92vw);
+    max-block-size: min(70dvh, 36rem);
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  .ft-changes ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+    min-inline-size: 0;
+  }
+  .ft-hunk {
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    min-inline-size: 0;
+  }
+  .ft-hunk .ft-where, .ft-hunk .ft-explain, .ft-hunk .ft-path { margin: 0; }
+  .ft-explain { overflow-wrap: break-word; line-height: 1.45; }
+  .ft-path {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .8rem;
+    overflow-wrap: anywhere;
+  }
+  .ft-diff {
+    margin: 0;
+    padding: .5rem .7rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    overflow-wrap: normal;
+    white-space: pre;
+    tab-size: 4;
+    font-size: .8rem;
+    line-height: 1.45;
+    background: var(--color-base-100, #fff);
+    color: var(--color-base-content, #111);
+    border-radius: .35rem;
+    max-inline-size: 100%;
+    min-inline-size: 0;
+  }
+  .ft-add { color: var(--color-success, #16a34a); }
+  .ft-del { color: var(--color-error, #dc2626); }
+  @supports (position-area: block-end) {
+    .ft-changes {
+      margin: 0;
+      margin-block-start: 0.35rem;
+      position-area: block-end span-inline-end;
+      position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+    }
+  }
+
+  /* pseudocode blocks — nspseudo highlighting comes from hljs */
+  pre.pcode { margin: 0; }
+
+  /* component references and concept words */
+  .ref { border-bottom: 1px dashed currentColor; cursor: pointer; }
+  .term {
+    text-decoration: underline dotted;
+    text-underline-offset: 0.18em;
+    cursor: pointer;
+  }
+  .term:focus-visible {
+    outline: max(2px, 0.08em) solid currentColor;
+    outline-offset: 0.25em;
+  }
+  .term:active { transform: scale(0.97); }
+  @media (prefers-reduced-motion: no-preference) {
+    .term { transition: transform 160ms var(--ease-out, ease-out); }
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .term:hover { text-decoration-thickness: 2px; }
+  }
+  #ref-popover {
+    position: fixed; z-index: 60; display: none; max-width: 24rem;
+    padding: .75rem 1rem; border-radius: .5rem;
+    background: var(--color-base-200, #eee); color: var(--color-base-content, #111);
+    box-shadow: 0 4px 16px rgb(0 0 0 / .25); font-size: .875rem;
+  }
+  #ref-popover .ref-path { overflow-wrap: anywhere; }
+  #ref-popover .ref-name { font-weight: 600; }
+  #ref-popover .ref-rels { margin-top: .5rem; padding-top: .5rem;
+    border-top: 1px solid var(--color-base-300, #ddd); font-size: .8rem; }
+  #ref-popover .ref-rels .rel { padding: .1rem 0; opacity: .9; }
+  #ref-popover .ref-view { margin-top: .5rem; }
+  #ref-popover .term-kicker {
+    font-size: .75rem; font-weight: 600; opacity: .65;
+    margin-block-end: .15rem;
+  }
+  #ref-popover .term-explain { line-height: 1.55; overflow-wrap: anywhere; }
+  #ref-popover .term-note {
+    margin-block-start: .5rem; padding-block-start: .5rem;
+    border-block-start: 1px solid var(--color-base-300, #ddd);
+  }
+  /* Author `display` beats the UA `dialog:not([open]) { display: none }`. */
+  dialog.file-dialog:not([open]) { display: none; }
+  dialog.file-dialog[open] {
+    display: flex; flex-direction: column;
+    inline-size: min(92vw, 64rem);
+    /* Definite block size: the code scroller can shrink instead of spilling. */
+    block-size: min(85dvh, fit-content); max-block-size: 85dvh;
+    padding: 0; border: none; overflow: hidden;
+    border-radius: .75rem; background: var(--color-base-100, #fff);
+    color: var(--color-base-content, #111);
+    /* Tailwind preflight zeroes the margin — restore modal centering. */
+    position: fixed; inset: 0; margin: auto;
+  }
+  dialog.file-dialog::backdrop { background: rgb(0 0 0 / .5); }
+  dialog.file-dialog .file-head {
+    display: flex; flex: none; align-items: center; justify-content: space-between;
+    gap: 1rem; min-inline-size: 0; padding: .75rem 1rem;
+    border-bottom: 1px solid var(--color-base-300, #ddd);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: inherit;
+  }
+  dialog.file-dialog .file-head form { flex: none; }
+  dialog.file-dialog .file-title { min-inline-size: 0; overflow-wrap: anywhere; }
+  dialog.file-dialog pre {
+    margin: 0; flex: 1 1 auto; min-block-size: 0; min-inline-size: 0;
+    overflow: auto; overscroll-behavior: contain;
+  }
+  /* highlight.js sets `pre code.hljs { overflow-x: auto }`, which also turns
+     overflow-y into auto and adds a second scrollbar. The pre is the scroller. */
+  dialog.file-dialog pre code,
+  dialog.file-dialog pre code.hljs {
+    display: block; overflow: visible;
+    padding-block: .5rem; padding-inline: 0;
+    background: transparent; position: relative;
+    min-inline-size: 100%;
+    tab-size: var(--indent-unit, 4);
+  }
+  dialog.file-dialog .code-line {
+    display: flex; align-items: stretch;
+    min-inline-size: 100%; inline-size: max-content;
+  }
+  dialog.file-dialog .code-line.is-focus { background: rgb(255 200 0 / .18); }
+  dialog.file-dialog .ln {
+    position: sticky; inset-inline-start: 0; z-index: 1; flex: none;
+    box-sizing: border-box;
+    inline-size: calc(var(--line-digits, 2) * 1ch + 1.5rem);
+    padding-inline: .75rem;
+    text-align: end; font-variant-numeric: tabular-nums;
+    user-select: none; pointer-events: none;
+    color: color-mix(in oklch, var(--color-base-content, CanvasText) 45%, transparent);
+    background: var(--color-base-100, canvas);
+    border-inline-end: 1px solid var(--color-base-300, #ddd);
+  }
+  dialog.file-dialog .code-line.is-focus .ln {
+    background: color-mix(in oklch, rgb(255 200 0) 18%, var(--color-base-100, canvas));
+  }
+  dialog.file-dialog .code-text {
+    --code-pad: 1rem;
+    position: relative;
+    padding-inline: var(--code-pad) 1.25rem; white-space: pre;
+  }
+  dialog.file-dialog .indents {
+    position: absolute; inset-inline-start: var(--code-pad); inset-block: 0;
+    display: flex; pointer-events: none; user-select: none;
+  }
+  dialog.file-dialog .indent {
+    flex: none; inline-size: calc(1ch * var(--indent-unit, 4));
+    box-shadow: inset -1px 0 0 color-mix(in oklch, var(--color-base-content, CanvasText) 32%, transparent);
+  }
+</style>
+</head>
+<body class="bg-base-200 text-base-content min-h-screen">
+<main class="mx-auto max-w-3xl px-6 py-10 space-y-8">
+  <header class="space-y-2">
+    <h1 class="text-3xl font-bold">@@NSX_TITLE@@</h1>
+    <p class="text-lg opacity-80">@@NSX_ONELINER@@</p>
+  </header>
+  <section class="rounded-box bg-base-100 p-6 shadow-sm">
+    <h2 class="text-xl font-semibold mb-3">@@NSX_L_FEATURES@@</h2>
+    @@NSX_FEATURE_TREE@@
+  </section>
+  <section class="rounded-box bg-base-100 p-6 shadow-sm">
+    <h2 class="text-xl font-semibold mb-3">@@NSX_L_PLAIN@@</h2>
+    @@NSX_PLAIN@@
+  </section>
+  <section class="rounded-box bg-base-100 p-6 shadow-sm">
+    <h2 class="text-xl font-semibold mb-3">Creational</h2>
+    @@NSX_CREATIONAL@@
+  </section>
+  <section class="rounded-box bg-base-100 p-6 shadow-sm">
+    <h2 class="text-xl font-semibold mb-3">Structural</h2>
+    @@NSX_STRUCTURAL@@
+  </section>
+  <section class="rounded-box bg-base-100 p-6 shadow-sm">
+    <h2 class="text-xl font-semibold mb-3">Behavioral</h2>
+    @@NSX_BEHAVIORAL@@
+  </section>
+  <section class="rounded-box bg-base-100 p-6 shadow-sm">
+    <h2 class="text-xl font-semibold mb-3">@@NSX_L_DIAGRAM@@</h2>
+    <div class="lens-diagram"><script class="graph-model" type="application/json">@@NSX_GRAPH@@</script></div>
+  </section>
+  @@NSX_FLOWS_SECTION@@
+</main>
+<script id="file-store" type="application/json">@@NSX_FILE_STORE@@</script>
+<script id="nsx-concepts" type="application/json">@@NSX_CONCEPTS@@</script>
+<div id="ref-popover" role="dialog" aria-modal="false"></div>
+<dialog id="file-dialog" class="file-dialog">
+  <div class="file-head">
+    <span class="file-title"></span>
+    <form method="dialog"><button class="btn btn-sm btn-ghost" aria-label="Close">✕</button></form>
+  </div>
+  <pre><code></code></pre>
+</dialog>
+<script id="nsx-ui" type="application/json">@@NSX_UI@@</script>
+@@NSX_BUNDLE@@
+</body>
+</html>

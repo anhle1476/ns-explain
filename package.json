@@ -1,0 +1,22 @@
+{
+  "name": "ns-explain",
+  "version": "0.1.0",
+  "description": "Explain a code change in plain language and export an interactive diagram.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "ns-explain": "./scripts/ns-explain.ts"
+  },
+  "files": [
+    "SKILL.md",
+    "artifact-playbook.md",
+    "scripts"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ngosangns/ns-explain.git"
+  }
+}
