@@ -28,6 +28,17 @@ Learn the repo layout enough to know each component's package path (module or im
 
 ## Reply
 
+Write every reply to the ASD-STE100 Simplified Technical English standard. When the reply language is not English (for example Vietnamese), apply the same STE writing rules to that language:
+
+- One topic per sentence and one instruction per sentence.
+- Short sentences: procedural sentences 20 words or fewer, descriptive sentences 25 words or fewer. Paragraphs of 6 sentences or fewer.
+- Active voice. Use the simple tenses (present, past, future).
+- Use approved, common words. Use one word for one meaning, and use the same word for the same thing every time. No synonyms for variety.
+- Write instructions in the imperative ("Click Save."). Put a condition before the action ("If the token expires, open the sign-in page.").
+- Use technical names and technical verbs only when they are necessary, and keep them consistent.
+- No idioms, slang, jokes, or figurative language. No long noun clusters (more than 3 nouns); break them up.
+- Use a vertical list for a sequence or for parallel items.
+
 Short sentences in the reply language. Say what a person sees and does. Use the real names and numbers from the code. Do not turn the answer into a file list. Do not invent a Factory, Builder, or singleton the code does not have.
 
 Do not abbreviate. Write every term in full — expand acronyms and shorthand in the explanation prose, even ones common in the codebase (`auth` → xác thực / authentication, `cfg` → configuration). Only code identifiers keep their exact spelling, since they are real names.
