@@ -1,0 +1,76 @@
+{
+  "name": "page-size",
+  "lang": "en",
+  "title": "Orders page shows 50 rows instead of 10",
+  "oneLiner": "The orders page now lists 50 orders per page instead of 10, using <span class=\"ref\" tabindex=\"0\" data-path=\"orders/filter.ts\" data-line=\"9\" data-desc=\"Cuts one page out of the full list of orders.\">pageOfOrders</span>.",
+  "featureTree": [
+    {
+      "label": "orders page",
+      "children": [
+        {
+          "label": "pagination",
+          "children": [
+            {
+              "label": "rows per page",
+              "children": [],
+              "changes": [{
+                "kind": "modified",
+                "old": "10 rows per page",
+                "new": "50 rows per page",
+                "hunks": [{
+                  "path": "orders/filter.ts",
+                  "line": 7,
+                  "diff": "- export const PAGE_SIZE = 10;\n+ export const PAGE_SIZE = 50;",
+                  "explain": "Each page now lists 50 orders instead of 10."
+                }]
+              }]
+            }
+          ],
+          "changes": []
+        }
+      ],
+      "changes": []
+    }
+  ],
+  "plainTerms": "<p>Someone opens the orders page. Before, they saw ten orders and had to press next again and again.</p><p>Now they see fifty orders at once. The next button appears only when more orders are waiting.</p>",
+  "lenses": {
+    "creational": "<p>Nothing new is constructed. <span class=\"ref\" tabindex=\"0\" data-path=\"orders/filter.ts\" data-line=\"7\" data-desc=\"How many orders one page holds.\">PAGE_SIZE</span> is a constant read by both functions; only its value changed.</p>",
+    "structural": "<p><span class=\"ref\" tabindex=\"0\" data-path=\"orders/handler.ts\" data-line=\"3\" data-desc=\"Answers the list-orders request for one page.\">handleListOrders</span> asks <span class=\"ref\" tabindex=\"0\" data-path=\"orders/filter.ts\" data-line=\"9\" data-desc=\"Cuts one page out of the full list of orders.\">pageOfOrders</span> for the rows. Both read <span class=\"ref\" tabindex=\"0\" data-path=\"orders/filter.ts\" data-line=\"7\" data-desc=\"How many orders one page holds.\">PAGE_SIZE</span>, so the page size lives in one place.</p>",
+    "behavioral": "<p>With 120 orders, page 0 returns 50 rows and <span class=\"ref\" tabindex=\"0\" data-path=\"orders/handler.ts\" data-line=\"5\" data-desc=\"Tells the page whether a next button is needed.\">hasMore</span> is true; page 2 returns the last 20 and <span class=\"ref\" tabindex=\"0\" data-path=\"orders/handler.ts\" data-line=\"5\" data-desc=\"Tells the page whether a next button is needed.\">hasMore</span> is false.</p>"
+  },
+  "pseudocode": [
+    {
+      "title": "List one page of orders",
+      "code": "when a list request arrives:\n  rows = orders from page * 50, up to 50 rows\n  hasMore = (page + 1) * 50 < total orders\n  reply with rows and hasMore"
+    }
+  ],
+  "graph": {
+    "labels": { "structural": "Structural", "creational": "Creational", "behavioral": "Behavioral" },
+    "nodes": [
+      { "id": "pkg", "label": "orders", "kind": "package", "desc": "The orders module.", "path": "orders/handler.ts", "line": 1 },
+      { "id": "handler", "label": "handleListOrders", "kind": "function", "parent": "pkg", "change": "same",
+        "desc": "Answers the list-orders request for one page.", "path": "orders/handler.ts", "line": 3 },
+      { "id": "page", "label": "pageOfOrders", "kind": "function", "parent": "pkg", "change": "same",
+        "desc": "Cuts one page out of the full list of orders.", "path": "orders/filter.ts", "line": 9 },
+      { "id": "size", "label": "PAGE_SIZE", "kind": "constant", "parent": "pkg", "change": "modified",
+        "desc": "How many orders one page holds: 10 before, 50 now.", "path": "orders/filter.ts", "line": 7 }
+    ],
+    "edges": [
+      { "id": "e1", "source": "handler", "target": "page", "label": "asks", "decides": "which rows",
+        "path": "orders/handler.ts", "line": 4 },
+      { "id": "e2", "source": "page", "target": "size", "label": "reads", "decides": "row count",
+        "path": "orders/filter.ts", "line": 10, "change": "modified" },
+      { "id": "e3", "source": "handler", "target": "size", "label": "reads", "decides": "has next",
+        "path": "orders/handler.ts", "line": 5, "change": "modified" }
+    ],
+    "flows": [
+      { "id": "list", "title": "List one page",
+        "steps": [
+          { "target": "handler", "note": "A list request arrives for a page number" },
+          { "target": "e1", "note": "The handler asks for that page's rows" },
+          { "target": "e2", "note": "The slice reads PAGE_SIZE: 50 rows" },
+          { "target": "e3", "note": "The handler compares (page + 1) * 50 with the total to set hasMore" }
+        ] }
+    ]
+  }
+}
