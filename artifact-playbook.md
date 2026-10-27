@@ -375,8 +375,9 @@ elements. Never several diagrams, never Mermaid/SVG/images.
   language from `lang`.
 - The viewer shows **one merged graph** — there is no lens switcher and no
   separate per-lens diagrams; every element is always on the canvas. (The
-  `lens` field is ignored now.) A mouse drag pans the graph, including one
-  that starts on a node, edge, or package container. The wheel scrolls the
+  `lens` field is ignored now.) A drag with the left or the wheel (middle)
+  mouse button pans the graph, including one that starts on a node, edge, or
+  package container. The wheel scrolls the
   page. Cmd/Ctrl + scroll zooms the graph. A fullscreen button on the canvas
   opens a dialog that fills the browser tab with this same diagram. The flow
   controls and the step list are hidden until that dialog is open, where they
