@@ -30,6 +30,33 @@ identical — only the content varies.
 4. When the user pastes review comments back (see "Review comments"), apply
    each to the manifest and run step 2 again.
 
+## Terms to keep untranslated — the glossary
+
+Some words must stay as written whatever the report language: product, editor
+and domain names such as `toolbar`, `composer` or `word document`. Pin them in a
+glossary instead of repeating the rule in each chat:
+
+- `~/.ns-explain/glossary.json` applies to every repo on this machine.
+- `.ns-explain/glossary.json` applies to the repo you run in (the working
+  directory, next to the manifests).
+- Format: `{"keep": ["toolbar", "word document", "InteractiveEditor"]}`. A term
+  can hold several words. Both files are read and the lists are added together;
+  a term that appears twice (any letter case) is kept once, with the spelling of
+  the user file.
+
+`ns-explain.ts glossary` prints the merged list and which files it came from;
+`playbook` prints the same list before this text. When the list is not empty,
+keep every term exactly as written in the `title`, `oneLiner`, feature tree,
+plain terms, lenses, pseudocode comments, graph labels and notes, and `concepts`.
+
+**If the user asks you to stop translating a word, add it to the glossary.**
+Use the repo file for a project term and the user file for a general one. Create
+the file and the `.ns-explain` folder if they are missing, keep the terms that
+are already there, and tell the user which file you changed. Do not leave the
+rule only in the chat or in a manifest: the next report would translate the
+word again. A broken file is skipped with a `warning:` line on stderr, so run
+`glossary` after you edit it.
+
 ## Review comments
 
 Every export includes a comment layer; it needs no manifest field. The reader

@@ -35,6 +35,7 @@ declare module "node:url" {
 
 declare module "node:os" {
   export function tmpdir(): string;
+  export function homedir(): string;
 }
 
 declare module "node:child_process" {

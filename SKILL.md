@@ -45,6 +45,11 @@ Do not abbreviate. Write every term in full — expand acronyms and shorthand in
 
 Respect ubiquitous language — both the domain's and the industry's. Words the codebase and its business use as shared vocabulary — entities, statuses, domain events, business terms — keep untranslated even when replying in another language, e.g. `Order`, `Settlement`, `PendingPayout` stay `Order`, `Settlement`, `PendingPayout`. The same holds for industry-common words — `ID`, `code`, `spinner`, `singleton`, `row`, `column`, `cache`, `token` — do not translate them either. Translate only the connective prose around them.
 
+**Pinned terms (glossary).** The user can pin extra terms that must never be translated, such as product or editor names (`toolbar`, `composer`, `word document`). They live in two JSON files, merged: `~/.ns-explain/glossary.json` for every repo on this machine and `.ns-explain/glossary.json` in the repo you run in. Format: `{"keep": ["term", "multi word term"]}`.
+
+- Before you write any reply, run `node <this skill's dir>/scripts/ns-explain.ts glossary` and keep every term it prints exactly as written, in the chat reply and in the manifest (titles, prose, labels, notes). `playbook` prints the same list first.
+- When the user asks you to stop translating a word, or to always use a word as written, add it to one of those files. Pick the repo file for a term that belongs to this project, and the user file for a term that applies everywhere. Create the file and the `.ns-explain` folder if they are missing, keep the existing terms, and say which file you changed. Do not put such a rule only in the chat or in a manifest: the next report would translate the word again.
+
 Whenever you name a component from the code — a type, function, class, interface, variable, endpoint, table — also name its package path, its path inside that package, and the line it is defined on when you know it, e.g. `OrderFilter` (`github.com/acme/internal/orders`, `filter.go:42`). This applies wherever a component is named in the three lenses and the diagram nodes — not in the feature tree or "Nói cho dễ hiểu", which stay features-only.
 
 1. One sentence: what the change is.

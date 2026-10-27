@@ -7,6 +7,7 @@
 // Usage:
 //   node ns-explain.ts                  terse index
 //   node ns-explain.ts playbook         manifest schema + authoring rules
+//   node ns-explain.ts glossary         terms to keep untranslated (user + repo files)
 //   node ns-explain.ts render <file.json>   -> .ns-explain/<name>.html
 //   node ns-explain.ts serve <file.html>    serve + open (same as serve.ts)
 
@@ -16,6 +17,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import type { GraphModel } from "./src/types.ts";
+import { formatGlossary, loadGlossary } from "./glossary.ts";
 
 interface Copy {
   features: string;
@@ -73,6 +75,7 @@ const HELP = `ns-explain artifact renderer — fixed HTML shell, manifest-driven
 
 commands:
   playbook                 manifest schema + authoring rules (read before writing one)
+  glossary                 terms the agent must keep untranslated (~/.ns-explain/glossary.json + .ns-explain/glossary.json)
   render <manifest.json>   build the viewer and pack it into .ns-explain/<name>.html
   serve <file.html>        serve the file's dir over HTTP and open the browser
   help                     this index
@@ -1019,7 +1022,16 @@ try {
   } else if (cmd === "serve") {
     if (!rest[0]) throw new Error("usage: serve <file.html>");
     await serve(rest[0]);
+  } else if (cmd === "glossary") {
+    const glossary = await loadGlossary();
+    for (const w of glossary.warnings) console.error(`warning: ${w}`);
+    process.stdout.write(formatGlossary(glossary));
   } else if (cmd === "playbook") {
+    // Pinned terms go first so they are read before the schema. An empty glossary adds nothing here;
+    // the playbook itself says where to configure one.
+    const glossary = await loadGlossary();
+    for (const w of glossary.warnings) console.error(`warning: ${w}`);
+    if (glossary.terms.length) process.stdout.write(`${formatGlossary(glossary)}\n---\n\n`);
     process.stdout.write(
       await readFile(join(DIR, "..", "artifact-playbook.md"), "utf8"),
     );
