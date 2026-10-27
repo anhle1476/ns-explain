@@ -26,7 +26,48 @@ identical — only the content varies.
    Render needs `bun` on PATH to build the viewer.
 3. `node <this skill's dir>/scripts/ns-explain.ts serve .ns-explain/<name>.html`
    as a background process — serves the directory and opens the browser. Give
-   the user the URL it prints. Stop it when the session ends. No review loop.
+   the user the URL it prints. Stop it when the session ends. No polling.
+4. When the user pastes review comments back (see "Review comments"), apply
+   each to the manifest and run step 2 again.
+
+## Review comments
+
+Every export includes a comment layer; it needs no manifest field. The reader
+hovers a block (or selects text) and clicks the comment icon, writes a note, and
+copies all notes with the bottom-right button. Comments can also be made inside a
+feature's diff popover, a reference popover, and the "View file" dialog. The
+pasted block looks like:
+
+```
+# Review comments on "<title>"
+Report: .ns-explain/<name>.html (manifest: .ns-explain/<name>.json)
+2 comments. Apply each one to the manifest, then render again.
+
+## 1. <section> › <position>
+Block: "<excerpt of the block>"
+Selected: "<quoted text, when the comment was made on a selection>"
+Files: <path:line, ...>
+Comment: <the reader's note>
+```
+
+Find the manifest field from the section: `Tóm tắt`/`Summary` is `oneLiner`,
+the feature section is `featureTree`, plain terms is `plainTerms`, the three
+lens sections are `lenses.*`, `Sơ đồ`/`Diagram` is `graph`, and flows are
+`pseudocode`. Match the paragraph by its `Block` excerpt, since `Paragraph N`
+counts only the commentable paragraphs in that section.
+
+Comments made inside a box are marked by their position text:
+
+- `<feature path> › <file>:<line>` is one hunk of that feature's popover. Change
+  that `hunks[].diff` or `hunks[].explain` in `featureTree`.
+- `Giải thích chi tiết: <name>` / `Detail popover: <name>` is the popover of a
+  component. Change the `data-desc` of that `.ref` span, or the `desc` of that
+  graph node or edge.
+- `Xem file › <path>:<line>` / `File view › <path>:<line>` is a line of the
+  embedded source. The file is not part of the manifest: the comment is about
+  the code itself, or about which line a `.ref` should point at (`data-line`).
+
+Do not edit the rendered HTML; change the manifest and render again.
 
 ## Manifest schema
 
@@ -110,6 +151,27 @@ identical — only the content varies.
   "concepts": [
     { "term": "timeout", "explain": "Một cái đồng hồ đếm ngược. Hết giờ mà chưa xong thì dừng." }
   ],
+  "testResults": {
+    "command": "go test ./internal/orders/...",
+    "environment": "go 1.22, linux",
+    "scope": "package",
+    "scopeNote": "Chạy toàn bộ test của package orders, không phải toàn repo.",
+    "passed": 31, "total": 31, "skipped": 0, "failed": [],
+    "earlier": [{
+      "label": "Lần chạy đầu, trước khi sửa spec.",
+      "passed": 29, "total": 31,
+      "cause": "Test cũ còn giả định mỗi trang 10 dòng.",
+      "failed": [{ "name": "TestPageSize/default", "message": "expected 10, got 50" }]
+    }],
+    "files": [{
+      "path": "internal/orders/filter_test.go", "line": 12,
+      "desc": "Test của bộ lọc đơn hàng.",
+      "tests": [
+        { "kind": "modified", "name": "TestPageSize/default", "line": 20, "behavior": "Trang đầu trả về 50 đơn thay vì 10." },
+        { "kind": "added", "name": "TestFilterByDate", "behavior": "Chỉ giữ các đơn từ ngày đã chọn trở đi." }
+      ]
+    }]
+  },
   "graph": { "labels": {}, "nodes": [], "edges": [], "flows": [] },
   "theme": "system",
   "extraHead": "",
@@ -180,6 +242,28 @@ Fields:
 - `files` — extra repo-relative paths to embed in the file store. Paths already
   referenced by `.ref` spans or graph nodes are embedded automatically; list
   only what nothing references.
+- `testResults` — optional; adds a **last** `<section>` titled "Kết quả test" /
+  "Test results" after Flows. Include it only when the explained change added
+  or edited tests; when absent, no section is rendered. Every number must come
+  from a run that actually happened in this session.
+  - Ran: `command` (verbatim), `environment` (optional), `scope` — `full` (whole
+    repo/suite), `package` (the package or project holding the change), or
+    `related` (only specific spec files) — plus `scopeNote`, a plain sentence
+    on what the run covered. Then `passed`, `total`, optional `skipped`, and
+    `failed: [{name, message}]` (empty list = none failed). The headline is the
+    final run; an earlier failing run that a fix turned green goes in
+    `earlier: [{label, passed, total, failed, cause}]` as history.
+  - Not run: `{"notRun": "reason", "files": […]}` shows "Chưa chạy test" and the
+    reason instead of numbers.
+  - Changes: `files: [{path, line?, desc?, tests}]`, grouped by spec file
+    (repo-relative `path`, rendered as a `.ref` that opens the file view at
+    `line`). Each test is `{kind: "added"|"modified", name, line?, behavior}`:
+    `name` is verbatim, `behavior` is one plain sentence of what the test checks
+    (not a restatement of the name). A test with its own `line` is also a `.ref`.
+    Spec files are embedded automatically.
+  - Built from `h2`, `p`, `ul`/`li` only, so each part is commentable. `render`
+    warns when `passed > total`, when failures are listed but counts say all
+    passed, when a test has no `behavior`, and when a spec path is unreadable.
 
 ## Naming components in prose — the `.ref` contract
 
@@ -321,3 +405,8 @@ elements. Never several diagrams, never Mermaid/SVG/images.
   feature tree. `explain` names no files and no identifiers.
 - Every flow from the reply ships as a `pseudocode` entry; the behavioral
   outcomes live in `graph.flows`.
+- Test results: when the change touches tests, the last section reports the run
+  honestly — real command, real counts, and whether the run was the full suite,
+  the package, or only related specs. Never invent or round numbers; with no
+  run, use `notRun` and say why. Each added or modified test states the
+  behavior it checks, not its name again.

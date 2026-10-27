@@ -343,6 +343,8 @@ export function mountPage(): void {
     const target = e.target;
     if (!(target instanceof Element)) return;
     if (pop.contains(target)) return;
+    // The comment layer sits outside the popover but acts on it: a click there must not close it.
+    if (target.closest(".nsx-c-ui")) return;
     const term = target.closest(".term");
     if (target.closest(".ref") || (term && !term.closest(".ft-trigger")) || target.closest(".cy-canvas")) return;
     hideRef();

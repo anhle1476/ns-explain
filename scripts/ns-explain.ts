@@ -25,6 +25,23 @@ interface Copy {
   viewFile: string;
   groups: Record<string, string>;
 }
+interface TestCopy {
+  title: string; notRun: string; passed: string; skipped: string;
+  scope: string; scopes: Record<string, string>; command: string;
+  failedHead: string; failedNone: string; earlier: string; cause: string;
+  changesHead: string; specDesc: string; kinds: Record<string, string>;
+}
+interface TestFailure { name?: string; message?: string }
+interface TestRun {
+  label?: string; cause?: string;
+  passed?: number; total?: number; skipped?: number; failed?: TestFailure[];
+}
+interface TestCase { kind?: string; name?: string; line?: number; behavior?: string }
+interface TestFile { path?: string; line?: number; desc?: string; tests?: TestCase[] }
+interface TestResults extends TestRun {
+  notRun?: string; command?: string; scope?: string; scopeNote?: string;
+  environment?: string; earlier?: TestRun[]; files?: TestFile[];
+}
 interface FeatureHunk { path: string; line?: number; diff: string; explain: string }
 interface FeatureChange { kind?: string; text?: string; old?: string; new?: string; hunks: FeatureHunk[] }
 interface FeatureNode { label: string; children: FeatureNode[]; changes: FeatureChange[] }
@@ -43,6 +60,7 @@ interface Manifest {
   graph?: GraphModel;
   theme?: string;
   extraHead?: string;
+  testResults?: TestResults;
   files?: string[];
 }
 
@@ -73,19 +91,60 @@ manifest[12]{field,required}:
   theme        "system" (default) or a daisyui theme name
   extraHead    optional HTML for <head> — project fonts, tokens
   files        extra repo-relative paths to embed beyond auto-detected refs
+  testResults  {command, scope: full|package|related, scopeNote, passed, total, skipped, failed:[{name, message}], earlier:[run], files:[{path, line, tests:[{kind: added|modified, name, behavior}]}]} | {notRun: "reason", files} — LAST section; only when the change added or edited tests; numbers from a run that really happened
 
 * required. workflow: playbook -> write .ns-explain/<name>.json -> render -> serve (background)`;
 
 const L10N = {
   vi: {
     features: "Tính năng bị ảnh hưởng", plain: "Nói cho dễ hiểu",
+    tests: {
+      title: "Kết quả test", notRun: "Chưa chạy test", passed: "đạt", skipped: "bỏ qua",
+      scope: "Phạm vi", scopes: { full: "Toàn bộ repo", package: "Cả package", related: "Chỉ spec liên quan" },
+      command: "Lệnh chạy", failedHead: "Test lỗi", failedNone: "Không có test nào lỗi.",
+      earlier: "Lần chạy trước đó", cause: "Nguyên nhân",
+      changesHead: "Test thêm hoặc sửa trong change này",
+      specDesc: "File spec có test thêm hoặc sửa trong change này.",
+      kinds: { added: "Thêm", modified: "Sửa" },
+    },
     diagram: "Sơ đồ", flows: "Luồng chạy", viewFile: "Xem file",
     groups: { added: "Thêm", modified: "Sửa", removed: "Xóa" },
+    comments: {
+      comment: "Bình luận", placeholder: "Viết bình luận…", hint: "Ctrl+Enter để lưu",
+      save: "Lưu", cancel: "Hủy", edit: "Sửa", remove: "Xóa",
+      copy: "Sao chép bình luận", copied: "Đã sao chép", copyFailed: "Không sao chép được",
+      copyEmpty: "Chưa có bình luận. Rê chuột vào một đoạn, hoặc bôi đen chữ, để thêm.",
+      list: "Bình luận", jump: "Đến chỗ này", clear: "Xóa tất cả",
+      clearConfirm: "Bấm lại để xóa hết", close: "Đóng",
+      selected: "Đoạn đã chọn", locTitle: "Tiêu đề", locSummary: "Tóm tắt",
+      locParagraph: "Đoạn", locItem: "Mục", locDiagram: "Sơ đồ",
+      locPopover: "Giải thích chi tiết", locFile: "Xem file",
+    },
   },
   en: {
+    tests: {
+      title: "Test results", notRun: "Tests not run", passed: "passed", skipped: "skipped",
+      scope: "Scope", scopes: { full: "Whole repo", package: "Whole package", related: "Related specs only" },
+      command: "Command", failedHead: "Failed tests", failedNone: "No test failed.",
+      earlier: "Earlier run", cause: "Cause",
+      changesHead: "Tests added or edited in this change",
+      specDesc: "Spec file with tests added or edited in this change.",
+      kinds: { added: "Added", modified: "Modified" },
+    },
     features: "Features affected", plain: "In plain terms",
     diagram: "Diagram", flows: "Flows", viewFile: "View file",
     groups: { added: "Added", modified: "Modified", removed: "Removed" },
+    comments: {
+      comment: "Comment", placeholder: "Write a comment…", hint: "Ctrl+Enter to save",
+      save: "Save", cancel: "Cancel", edit: "Edit", remove: "Delete",
+      copy: "Copy comments", copied: "Copied", copyFailed: "Copy failed",
+      copyEmpty: "No comments yet. Hover a block, or select text, to add one.",
+      list: "Comments", jump: "Jump to", clear: "Clear all",
+      clearConfirm: "Click again to clear", close: "Close",
+      selected: "Selected text", locTitle: "Title", locSummary: "Summary",
+      locParagraph: "Paragraph", locItem: "Item", locDiagram: "Diagram",
+      locPopover: "Detail popover", locFile: "File view",
+    },
   },
 };
 
@@ -101,7 +160,10 @@ const escHtml = (s: unknown) =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 // Safe inside a <script type="application/json"> block — a file body or graph
 // label can never break out of the script tag.
-const escJson = (o: unknown) => JSON.stringify(o).replace(/<\//g, "<\\/");
+// `<` becomes \u003c, which JSON.parse reads back as `<`. Escaping only `</` is not enough: an embedded file
+// holding `<!--` followed by `<script` puts the HTML parser in the "double escaped" state, where `</script>`
+// no longer ends the block and everything after it, bundle included, is swallowed.
+const escJson = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");
 
 const FT_CLASS: Record<string, string> = { added: "ft-added", modified: "ft-modified", removed: "ft-removed" };
 const FT_KINDS = new Set(["added", "modified", "removed"]);
@@ -624,6 +686,130 @@ function validateGraph(graph: GraphModel | undefined): string[] {
   return warnings;
 }
 
+const TR_SCOPES = new Set(["full", "package", "related"]);
+const TR_KINDS = new Set(["added", "modified"]);
+const isCount = (n: unknown): n is number => typeof n === "number" && Number.isInteger(n) && n >= 0;
+
+function testFiles(tr: TestResults | undefined): TestFile[] {
+  return Array.isArray(tr?.files) ? tr.files : [];
+}
+
+function checkTestRun(run: TestRun, where: string, warnings: string[]) {
+  const failed = Array.isArray(run.failed) ? run.failed : [];
+  if (!isCount(run.passed) || !isCount(run.total)) {
+    warnings.push(`${where}: needs integer passed and total counts`);
+    return;
+  }
+  if (run.skipped != null && !isCount(run.skipped))
+    warnings.push(`${where}: skipped "${run.skipped}" is not a count`);
+  if (run.passed > run.total)
+    warnings.push(`${where}: passed (${run.passed}) is more than total (${run.total})`);
+  if (failed.length && run.passed + (run.skipped ?? 0) >= run.total)
+    warnings.push(`${where}: lists ${failed.length} failed test(s) but the counts say every test passed`);
+  for (const f of failed)
+    if (!String(f?.name ?? "").trim() || !String(f?.message ?? "").trim())
+      warnings.push(`${where}: every failed test needs a name and its failure message`);
+}
+
+function checkTestResults(tr: TestResults | undefined, warnings: string[]) {
+  if (tr == null) return;
+  if (typeof tr !== "object" || Array.isArray(tr)) {
+    warnings.push("testResults: expected an object");
+    return;
+  }
+  if (tr.notRun != null) {
+    if (!String(tr.notRun).trim()) warnings.push("testResults: notRun needs a reason");
+  } else {
+    if (!String(tr.command ?? "").trim())
+      warnings.push("testResults: missing command — show the exact command that ran");
+    if (!TR_SCOPES.has(String(tr.scope)))
+      warnings.push(`testResults: scope must be full, package, or related (got "${tr.scope ?? ""}")`);
+    if (!String(tr.scopeNote ?? "").trim())
+      warnings.push("testResults: missing scopeNote — say in plain words what the run covered");
+    checkTestRun(tr, "testResults", warnings);
+    (Array.isArray(tr.earlier) ? tr.earlier : []).forEach((run, i) =>
+      checkTestRun(run, `testResults.earlier[${i}]`, warnings));
+  }
+  for (const [i, file] of testFiles(tr).entries()) {
+    const at = `testResults.files[${i}] "${file?.path ?? "?"}"`;
+    if (!String(file?.path ?? "").trim()) warnings.push(`${at}: missing path`);
+    if (file?.line != null && !(Number.isInteger(file.line) && file.line >= 1))
+      warnings.push(`${at}: line "${file.line}" is not a line number`);
+    if (!Array.isArray(file?.tests) || !file.tests.length)
+      warnings.push(`${at}: lists no tests`);
+    for (const test of file?.tests ?? []) {
+      const name = String(test?.name ?? "").trim();
+      if (!name) warnings.push(`${at}: a test has no name`);
+      if (!TR_KINDS.has(String(test?.kind)))
+        warnings.push(`${at}: test "${name}" needs kind added or modified`);
+      if (!String(test?.behavior ?? "").trim())
+        warnings.push(`${at}: test "${name}" has no behavior — say what it checks in a sentence, not a restatement of the name`);
+      if (test?.line != null && !(Number.isInteger(test.line) && test.line >= 1))
+        warnings.push(`${at}: test "${name}" line "${test.line}" is not a line number`);
+    }
+  }
+}
+
+function renderTestResults(tr: TestResults | undefined, t: TestCopy): string {
+  if (tr == null || typeof tr !== "object" || Array.isArray(tr)) return "";
+  const chip = (tone: string, text: string) => `<span class="tr-chip tr-${tone}">${escHtml(text)}</span>`;
+  const ref = (path: string, line: number | undefined, desc: string, label: string) =>
+    `<span class="ref" tabindex="0" data-path="${escAttr(path)}"${line != null ? ` data-line="${line}"` : ""} data-desc="${escAttr(desc)}">${escHtml(label)}</span>`;
+  const failList = (failed: TestFailure[] | undefined) => {
+    const items = (Array.isArray(failed) ? failed : []).map((f) =>
+      `<li><span class="tr-name">${escHtml(f?.name ?? "")}</span> <span class="tr-msg">${escHtml(f?.message ?? "")}</span></li>`);
+    return items.length ? `<ul class="tr-list">${items.join("")}</ul>` : "";
+  };
+  const counts = (run: TestRun) => {
+    const passed = Number(run.passed), total = Number(run.total);
+    const failed = Array.isArray(run.failed) ? run.failed.length : 0;
+    const skipped = Number(run.skipped ?? 0);
+    const bad = failed > 0 || passed + skipped < total;
+    return chip(bad ? "fail" : "pass", `${passed}/${total} ${t.passed}`) +
+      (skipped > 0 ? chip("warn", `${skipped} ${t.skipped}`) : "");
+  };
+
+  const parts: string[] = [];
+  if (tr.notRun != null) {
+    parts.push(`<p>${chip("info", t.notRun)} ${escHtml(tr.notRun)}</p>`);
+  } else {
+    const scope = String(tr.scope);
+    parts.push(`<p>${counts(tr)}</p>`);
+    parts.push(
+      `<p><span class="tr-sub">${t.scope}:</span> ${chip(scope === "full" ? "pass" : "info", t.scopes[scope] ?? scope)} ${escHtml(tr.scopeNote ?? "")}</p>`,
+    );
+    const env = tr.environment ? ` <span class="opacity-70">(${escHtml(tr.environment)})</span>` : "";
+    parts.push(`<p><span class="tr-sub">${t.command}:</span> <code class="tr-cmd">${escHtml(tr.command ?? "")}</code>${env}</p>`);
+    const failures = failList(tr.failed);
+    parts.push(failures ? `<p class="tr-sub">${t.failedHead}</p>${failures}` : `<p>${t.failedNone}</p>`);
+    for (const run of Array.isArray(tr.earlier) ? tr.earlier : []) {
+      parts.push(
+        `<p><span class="tr-sub">${t.earlier}:</span> ${counts(run)} ${escHtml(run.label ?? "")}</p>` +
+        (run.cause ? `<p><span class="tr-sub">${t.cause}:</span> ${escHtml(run.cause)}</p>` : "") +
+        failList(run.failed),
+      );
+    }
+  }
+
+  const files = testFiles(tr).filter((f) => f?.path && Array.isArray(f.tests) && f.tests.length);
+  if (files.length) {
+    parts.push(`<p class="tr-sub">${t.changesHead}</p>`);
+    for (const file of files) {
+      const path = String(file.path);
+      parts.push(`<p class="tr-file">${ref(path, file.line, file.desc || t.specDesc, path)}</p>`);
+      const items = (file.tests ?? []).map((test) => {
+        const kind = TR_KINDS.has(String(test.kind)) ? String(test.kind) : "modified";
+        const name = test.line != null
+          ? ref(path, test.line, test.behavior ?? "", test.name ?? "")
+          : escHtml(test.name ?? "");
+        return `<li><span class="ftree-badge ft-${kind}">${t.kinds[kind]}</span> <span class="tr-name">${name}</span> ${escHtml(test.behavior ?? "")}</li>`;
+      });
+      parts.push(`<ul class="tr-list">${items.join("")}</ul>`);
+    }
+  }
+  return `<section class="rounded-box bg-base-100 p-6 shadow-sm space-y-2"><h2 class="text-xl font-semibold mb-3">${t.title}</h2>${parts.join("")}</section>`;
+}
+
 async function render(manifestPath: string) {
   const mp = resolve(manifestPath);
   const manifest = JSON.parse(await readFile(mp, "utf8")) as Manifest;
@@ -660,6 +846,8 @@ async function render(manifestPath: string) {
   }
   for (const n of graphModel.nodes || []) if (n.path) paths.add(n.path);
   for (const e of graphModel.edges || []) if (e.path) paths.add(e.path);
+  for (const f of testFiles(manifest.testResults))
+    if (f?.path) paths.add(String(f.path));
 
   const store: Record<string, string> = {};
   const missing: string[] = [];
@@ -670,6 +858,10 @@ async function render(manifestPath: string) {
       missing.push(p);
     }
   }
+  for (const f of testFiles(manifest.testResults))
+    if (f?.path && missing.includes(String(f.path)))
+      warnings.push(`testResults: spec "${f.path}" cannot be read from the current directory — run render from the repo root`);
+  checkTestResults(manifest.testResults, warnings);
 
   const graph = { lang, ...graphModel };
   // Normalize indentation: tabs → 2 spaces, strip the common leading indent.
@@ -711,18 +903,23 @@ async function render(manifestPath: string) {
     L_DIAGRAM: t.diagram,
     GRAPH: escJson(graph),
     FLOWS_SECTION: flowsSection,
+    TESTS_SECTION: renderTestResults(manifest.testResults, t.tests),
     FILE_STORE: escJson(store),
     CONCEPTS: escJson(concepts),
-    UI: escJson({ viewFile: t.viewFile, plain: t.plain }),
+    UI: escJson({ viewFile: t.viewFile, plain: t.plain, name, title: manifest.title ?? "", comments: t.comments }),
   };
 
   const bundle = await clientBundle();
-  // Insert the bundle after the other placeholders so a minified `@@` sequence
-  // inside the script cannot be read as a template token.
-  let tpl = await readFile(join(DIR, "template.html"), "utf8");
-  tpl = tpl.replace(/@@NSX_([A-Z_]+)@@/g, (token: string, k: string) =>
-    k === "BUNDLE" ? token : (map[k] ?? ""));
-  tpl = tpl.replace("@@NSX_BUNDLE@@", `<script>\n${bundle}\n</script>`);
+  // Split the raw template at the bundle marker first. An embedded file (the renderer's own source, say) can
+  // carry the same marker text, so a later search for it could hit the file store instead of this spot.
+  // The bundle is joined in last, so a minified `@@` or `$&` inside it is never read as a token or pattern.
+  const raw = await readFile(join(DIR, "template.html"), "utf8");
+  const at = raw.indexOf("@@NSX_BUNDLE@@");
+  if (at < 0) throw new Error("template.html has no @@NSX_BUNDLE@@ marker");
+  const fill = (part: string) =>
+    part.replace(/@@NSX_([A-Z_]+)@@/g, (_token: string, k: string) => map[k] ?? "");
+  const tpl =
+    fill(raw.slice(0, at)) + `<script>\n${bundle}\n</script>` + fill(raw.slice(at + "@@NSX_BUNDLE@@".length));
 
   const outDir = resolve(".ns-explain");
   await mkdir(outDir, { recursive: true });

@@ -229,6 +229,26 @@
   /* pseudocode blocks — nspseudo highlighting comes from hljs */
   pre.pcode { margin: 0; }
 
+  /* test results — status chips use the theme's solid status colors */
+  .tr-chip {
+    display: inline-block; font-size: .75rem; font-weight: 600; line-height: 1.4;
+    padding: .1rem .6rem; border-radius: .5rem; margin-inline-end: .35rem;
+  }
+  .tr-chip.tr-pass { background: var(--color-success, #16a34a); color: var(--color-success-content, #fff); }
+  .tr-chip.tr-fail { background: var(--color-error, #dc2626); color: var(--color-error-content, #fff); }
+  .tr-chip.tr-warn { background: var(--color-warning, #d97706); color: var(--color-warning-content, #111); }
+  .tr-chip.tr-info { background: var(--color-base-300, #d1d5db); color: var(--color-base-content, #111); }
+  .tr-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .6rem; }
+  .tr-list li { line-height: 1.55; min-inline-size: 0; }
+  .tr-file { font-weight: 600; margin-block: 1rem .35rem; }
+  .tr-name {
+    font-size: .85em; padding: .05rem .35rem; border-radius: .25rem;
+    background: var(--color-base-200, #eee); color: var(--color-base-content, #111);
+  }
+  .tr-msg { color: var(--color-error, #dc2626); }
+  .tr-cmd { font-size: .85em; overflow-wrap: anywhere; }
+  .tr-sub { font-weight: 600; }
+
   /* component references and concept words */
   .ref { border-bottom: 1px dashed currentColor; cursor: pointer; }
   .term {
@@ -370,6 +390,7 @@
     <div class="lens-diagram"><script class="graph-model" type="application/json">@@NSX_GRAPH@@</script></div>
   </section>
   @@NSX_FLOWS_SECTION@@
+  @@NSX_TESTS_SECTION@@
 </main>
 <script id="file-store" type="application/json">@@NSX_FILE_STORE@@</script>
 <script id="nsx-concepts" type="application/json">@@NSX_CONCEPTS@@</script>
