@@ -1,7 +1,7 @@
-// Interactive Cytoscape diagram. Compounds stay open. A drag pans, including
-// one that starts on a node, edge, or package. A package click clears focus
-// and does not open the popover. The canvas button opens the diagram in a
-// dialog that fills the browser tab.
+// Interactive Cytoscape diagram. Compounds stay open. A drag with the left or
+// the wheel (middle) button pans, including one that starts on a node, edge,
+// or package. A package click clears focus and does not open the popover. The
+// canvas button opens the diagram in a dialog that fills the browser tab.
 import { cytoscapeLib } from "./cytoscape.ts";
 import type { CyCore, CyElement, CyEvent, CyStyleBlock } from "./cytoscape.ts";
 import { DIAGRAM_CSS } from "./diagram-css.ts";
@@ -335,9 +335,11 @@ function mount(container: HTMLElement, cyFactory: ReturnType<typeof cytoscapeLib
   }, { passive: false });
 
   // Movement under Cytoscape's 4px tap threshold stays a click.
-  let panDrag: { x: number; y: number; panning: boolean } | null = null;
-  const endPanDrag = (): void => {
+  let panDrag: { x: number; y: number; panning: boolean; button: number } | null = null;
+  // Only the button that started the drag ends it: releasing another button mid-drag must not drop the pan.
+  const endPanDrag = (ev?: MouseEvent): void => {
     if (!panDrag) return;
+    if (ev && ev.button !== panDrag.button) return;
     panDrag = null;
     canvas.classList.remove("is-panning");
     window.removeEventListener("mousemove", movePanDrag);
@@ -356,9 +358,12 @@ function mount(container: HTMLElement, cyFactory: ReturnType<typeof cytoscapeLib
     panDrag.y = ev.clientY;
     cy.panBy({ x: dx, y: dy });
   };
+  // Left button and wheel button (middle) both pan. Right button stays free for the context menu.
   const beginPan = (oe: MouseEvent): void => {
-    if (oe.button !== 0 || panDrag) return;
-    panDrag = { x: oe.clientX, y: oe.clientY, panning: false };
+    if ((oe.button !== 0 && oe.button !== 1) || panDrag) return;
+    // A wheel-button press would otherwise start the browser's auto-scroll (Windows) or paste (Linux).
+    if (oe.button === 1) oe.preventDefault();
+    panDrag = { x: oe.clientX, y: oe.clientY, panning: false, button: oe.button };
     window.addEventListener("mousemove", movePanDrag);
     window.addEventListener("mouseup", endPanDrag);
   };
