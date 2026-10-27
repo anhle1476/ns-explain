@@ -89,6 +89,7 @@ marked `*` are required.
 | `theme` | `"system"` (default, follows the OS) or a DaisyUI theme name. |
 | `extraHead` | Raw HTML appended to `<head>`, for project fonts or tokens. |
 | `files` | Extra repo-relative paths to embed besides the auto-detected ones. |
+| `testResults` | Optional, adds a last "Test results" section. Shape: `{command, environment?, scope: "full" \| "package" \| "related", scopeNote, passed, total, skipped?, failed: [{name, message}], earlier?: [{label, passed, total, failed, cause?}], files: [{path, line?, desc?, tests: [{kind: "added" \| "modified", name, line?, behavior}]}]}`. Use `{notRun: "reason", files}` when nothing was run. Counts must come from a run that really happened. `render` warns on `passed > total`, failures with all-pass counts, a test with no `behavior`, and an unreadable spec path. |
 
 The diagram is a single graph; types are in `scripts/src/types.ts`:
 
@@ -144,18 +145,30 @@ tool:
 
 - Hover a paragraph, list item, heading, feature row, pseudocode block or the
   diagram: a comment icon appears to its right. On a touch screen, tap the block.
+- The same works inside the boxes the page opens: a hunk in a feature's diff
+  popover, the popover behind a dotted or dashed underline or a diagram element,
+  and a line (or a selected span of lines) in the "View file" dialog. The icon
+  sits in the top-right corner of that box.
 - Select any text: a comment icon appears next to the selection. The selected
   text is quoted in the comment.
 - The icon opens a small box. `Ctrl+Enter` (or `Cmd+Enter`) saves, `Escape`
-  cancels. Reopen a commented block to edit or delete its comments.
+  cancels. Reopen a commented place to edit or delete its comments.
+- A commented block gets a bar on its left edge. The row or underlined word that
+  opens a commented popover gets a dot, so you can see where comments are
+  without opening anything.
 - Comments live in memory only. Reloading the page drops them.
-- The `Copy comments` button, bottom right, copies all comments as plain text.
+- The `Comments (n)` button, bottom right, opens the list in document order. Each
+  entry shows its place, an excerpt, and the note, with `Jump to`, `Edit` and
+  `Delete`. `Jump to` scrolls to the block, or reopens the popover or file that
+  held the comment and flashes it. `Clear all` asks for a second click.
+- The `Copy comments` button, next to it, copies all comments as plain text.
   Each entry has the section, the position inside it (paragraph number, feature
-  path, or diagram), an excerpt of the block, the selected text, the files the
+  path, popover, or file and line), an excerpt, the selected text, the files the
   block refers to, and the comment. Paste it into the agent, which edits the
   manifest and renders again.
 
-Button and dialog text follow the manifest `lang` (`vi` or `en`).
+Button and dialog text follow the manifest `lang` (`vi` or `en`). The buttons
+move into an open dialog or popover, because those sit above the page.
 
 ## Layout
 
@@ -164,6 +177,7 @@ SKILL.md               skill instructions for the agent
 artifact-playbook.md   manifest and diagram contract (printed by `playbook`)
 scripts/ns-explain.ts  CLI: playbook, render, serve
 scripts/serve.ts       local HTTP server used by `serve`
+scripts/render.test.ts tests for `render` (run with `bun test`)
 scripts/template.html  fixed HTML shell filled in by `render`
 scripts/src/           TypeScript viewer and page runtime, bundled by bun
 docs/                  example manifest and screenshots

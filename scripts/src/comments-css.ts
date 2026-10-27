@@ -24,6 +24,15 @@ export const COMMENTS_CSS = String.raw`
 
   /* A block that already carries a comment keeps a quiet marker. */
   .nsx-c-has { box-shadow: -3px 0 0 0 var(--color-primary, #4f46e5); border-radius: 2px; }
+  /* The popover keeps its own drop shadow; a code line puts the bar on its gutter, which paints over the line. */
+  #ref-popover.nsx-c-has { box-shadow: 0 4px 16px rgb(0 0 0 / .25), -3px 0 0 0 var(--color-primary, #4f46e5); }
+  dialog.file-dialog .code-line.nsx-c-has { box-shadow: none; background: color-mix(in oklch, var(--color-primary, #4f46e5) 10%, transparent); }
+  dialog.file-dialog .code-line.nsx-c-has .ln { box-shadow: inset 3px 0 0 var(--color-primary, #4f46e5); }
+  /* A dot after the thing that opens a commented popover (feature row, underlined word, diagram element). */
+  .nsx-c-dot::after {
+    content: ""; display: inline-block; inline-size: .45em; block-size: .45em; margin-inline-start: .25em;
+    border-radius: 9999px; vertical-align: super; background: var(--color-primary, #4f46e5);
+  }
 
   .nsx-c-composer {
     display: none; inline-size: min(22rem, calc(100vw - 16px));
@@ -79,22 +88,60 @@ export const COMMENTS_CSS = String.raw`
   }
   .nsx-c-primary:hover { background: color-mix(in oklch, var(--color-primary, #4f46e5) 88%, black); }
 
-  .nsx-c-copy {
+  .nsx-c-dock {
     position: fixed; inset-block-end: 1.25rem; inset-inline-end: 1.25rem; z-index: 65;
+    display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem;
+    max-inline-size: calc(100vw - 2.5rem);
+  }
+  .nsx-c-copy, .nsx-c-listbtn {
     appearance: none; cursor: pointer; font: inherit; font-size: .85rem; font-weight: 600;
     padding: .6rem 1rem; border: 0; border-radius: 9999px;
     color: var(--color-primary-content, #fff); background: var(--color-primary, #4f46e5);
     box-shadow: 0 4px 16px rgb(0 0 0 / .3);
     transition: transform .12s cubic-bezier(0.23, 1, 0.32, 1), background .2s;
   }
-  .nsx-c-copy:hover:not(:disabled) { transform: translateY(-1px); }
-  .nsx-c-copy:active:not(:disabled) { transform: scale(.97); }
+  .nsx-c-listbtn {
+    color: var(--color-base-content, #111); background: var(--color-base-100, #fff);
+    border: 1px solid var(--color-base-300, #ccc);
+  }
+  .nsx-c-listbtn.is-open { background: var(--color-base-200, #eee); }
+  .nsx-c-copy:hover:not(:disabled), .nsx-c-listbtn:hover { transform: translateY(-1px); }
+  .nsx-c-copy:active:not(:disabled), .nsx-c-listbtn:active { transform: scale(.97); }
   .nsx-c-copy:disabled { cursor: not-allowed; opacity: .45; box-shadow: none; }
   .nsx-c-copy.is-ok { background: var(--color-success, #16a34a); }
   .nsx-c-copy.is-fail { background: var(--color-error, #dc2626); }
 
-  @media (prefers-reduced-motion: reduce) {
-    .nsx-c-icon, .nsx-c-copy { transition: none; }
+  .nsx-c-panel {
+    display: none; position: fixed; inset-block-end: 4.25rem; inset-inline-end: 1.25rem; z-index: 66;
+    flex-direction: column; overflow: hidden;
+    inline-size: min(26rem, calc(100vw - 2.5rem)); max-block-size: min(70vh, 34rem);
+    font-size: .875rem; border-radius: .6rem;
+    color: var(--color-base-content, #111); background: var(--color-base-100, #fff);
+    border: 1px solid var(--color-base-300, #ddd); box-shadow: 0 8px 28px rgb(0 0 0 / .3);
   }
-  @media print { .nsx-c-ui, .nsx-c-copy { display: none !important; } .nsx-c-has { box-shadow: none; } }
+  .nsx-c-phead {
+    display: flex; align-items: center; gap: .75rem; padding: .6rem .75rem;
+    border-block-end: 1px solid var(--color-base-300, #ddd);
+  }
+  .nsx-c-ptitle { flex: 1 1 auto; font-weight: 600; }
+  .nsx-c-pbody { overflow-y: auto; padding: .5rem; display: grid; gap: .4rem; }
+  .nsx-c-pitem { padding: .5rem .6rem; border-radius: .4rem; background: var(--color-base-200, #eee); }
+  .nsx-c-pitem.is-editing { outline: 2px solid var(--color-primary, #4f46e5); }
+  .nsx-c-pwhere { font-size: .8rem; font-weight: 600; overflow-wrap: anywhere; }
+  .nsx-c-pexcerpt { margin-block: .1rem .3rem; font-size: .75rem; opacity: .6; overflow-wrap: anywhere; }
+  .nsx-c-pempty { padding: .75rem; font-size: .8rem; opacity: .7; }
+  .nsx-c-pedit { margin-block-start: .35rem; }
+  .nsx-c-link:disabled { opacity: .4; cursor: not-allowed; text-decoration: none; }
+
+  /* Jump target: tint fades out into the block's own background (no end keyframe on purpose). */
+  .nsx-c-flash { animation: nsx-c-flash 1.5s ease-out; }
+  @keyframes nsx-c-flash {
+    from { background-color: color-mix(in oklch, var(--color-primary, #4f46e5) 35%, transparent); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nsx-c-icon, .nsx-c-copy, .nsx-c-listbtn { transition: none; }
+    .nsx-c-flash { animation: none; outline: 2px solid var(--color-primary, #4f46e5); }
+  }
+  @media print { .nsx-c-ui, .nsx-c-dock, .nsx-c-panel { display: none !important; } .nsx-c-has { box-shadow: none; } }
 `;
