@@ -42,6 +42,26 @@ node scripts/ns-explain.ts serve .ns-explain/<name>.html
 | `playbook` | Prints `artifact-playbook.md`: manifest schema, the `.ref` component contract, the diagram DSL, and authoring rules. Read it before writing a manifest. |
 | `render <manifest.json>` | Validates the manifest, bundles the viewer with `bun build`, and writes one self-contained HTML file. |
 | `serve <file.html> [--port <n>] [--no-open]` | Serves the file's directory over HTTP and opens the browser. |
+| `glossary` | Prints the terms to keep untranslated, merged from `~/.ns-explain/glossary.json` and `.ns-explain/glossary.json`, and the files they came from. |
+
+### glossary
+
+Pin terms that the agent must not translate, such as product or editor names:
+
+```json
+{ "keep": ["toolbar", "composer", "word document", "InteractiveEditor"] }
+```
+
+- `~/.ns-explain/glossary.json` applies to every repo on this machine.
+  `.ns-explain/glossary.json` applies to the repo you run in. Both are read and
+  added together; a term that appears twice (any letter case) is kept once.
+- `playbook` prints the list before the schema, and `SKILL.md` tells the agent to
+  run `glossary` before it writes. When you ask the agent to stop translating a
+  word, it adds the word to one of these files.
+- A file that is missing is skipped. A file that is not valid JSON, or has no
+  `keep` list, is skipped with a `warning:` line on stderr.
+- The list is guidance for the agent. `render` does not check the manifest
+  against it.
 
 ### render
 
