@@ -26,7 +26,34 @@ identical — only the content varies.
    Render needs `bun` on PATH to build the viewer.
 3. `node <this skill's dir>/scripts/ns-explain.ts serve .ns-explain/<name>.html`
    as a background process — serves the directory and opens the browser. Give
-   the user the URL it prints. Stop it when the session ends. No review loop.
+   the user the URL it prints. Stop it when the session ends. No polling.
+4. When the user pastes review comments back (see "Review comments"), apply
+   each to the manifest and run step 2 again.
+
+## Review comments
+
+Every export includes a comment layer; it needs no manifest field. The reader
+hovers a block (or selects text) and clicks the comment icon, writes a note, and
+copies all notes with the bottom-right button. The pasted block looks like:
+
+```
+# Review comments on "<title>"
+Report: .ns-explain/<name>.html (manifest: .ns-explain/<name>.json)
+2 comments. Apply each one to the manifest, then render again.
+
+## 1. <section> › <position>
+Block: "<excerpt of the block>"
+Selected: "<quoted text, when the comment was made on a selection>"
+Files: <path:line, ...>
+Comment: <the reader's note>
+```
+
+Find the manifest field from the section: `Tóm tắt`/`Summary` is `oneLiner`,
+the feature section is `featureTree`, plain terms is `plainTerms`, the three
+lens sections are `lenses.*`, `Sơ đồ`/`Diagram` is `graph`, and flows are
+`pseudocode`. Match the paragraph by its `Block` excerpt, since `Paragraph N`
+counts only the commentable paragraphs in that section. Do not edit the
+rendered HTML; change the manifest and render again.
 
 ## Manifest schema
 

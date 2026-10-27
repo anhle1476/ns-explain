@@ -137,6 +137,26 @@ plain sentence about what that diff does.
 The full-screen diagram. The side panel picks a flow and steps through it; the
 current hop is highlighted on the graph.
 
+## Review comments
+
+Every exported page carries a comment layer, so feedback does not need a second
+tool:
+
+- Hover a paragraph, list item, heading, feature row, pseudocode block or the
+  diagram: a comment icon appears to its right. On a touch screen, tap the block.
+- Select any text: a comment icon appears next to the selection. The selected
+  text is quoted in the comment.
+- The icon opens a small box. `Ctrl+Enter` (or `Cmd+Enter`) saves, `Escape`
+  cancels. Reopen a commented block to edit or delete its comments.
+- Comments live in memory only. Reloading the page drops them.
+- The `Copy comments` button, bottom right, copies all comments as plain text.
+  Each entry has the section, the position inside it (paragraph number, feature
+  path, or diagram), an excerpt of the block, the selected text, the files the
+  block refers to, and the comment. Paste it into the agent, which edits the
+  manifest and renders again.
+
+Button and dialog text follow the manifest `lang` (`vi` or `en`).
+
 ## Layout
 
 ```

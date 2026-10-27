@@ -81,11 +81,27 @@ const L10N = {
     features: "Tính năng bị ảnh hưởng", plain: "Nói cho dễ hiểu",
     diagram: "Sơ đồ", flows: "Luồng chạy", viewFile: "Xem file",
     groups: { added: "Thêm", modified: "Sửa", removed: "Xóa" },
+    comments: {
+      comment: "Bình luận", placeholder: "Viết bình luận…", hint: "Ctrl+Enter để lưu",
+      save: "Lưu", cancel: "Hủy", edit: "Sửa", remove: "Xóa",
+      copy: "Sao chép bình luận", copied: "Đã sao chép", copyFailed: "Không sao chép được",
+      copyEmpty: "Chưa có bình luận. Rê chuột vào một đoạn, hoặc bôi đen chữ, để thêm.",
+      selected: "Đoạn đã chọn", locTitle: "Tiêu đề", locSummary: "Tóm tắt",
+      locParagraph: "Đoạn", locItem: "Mục", locDiagram: "Sơ đồ",
+    },
   },
   en: {
     features: "Features affected", plain: "In plain terms",
     diagram: "Diagram", flows: "Flows", viewFile: "View file",
     groups: { added: "Added", modified: "Modified", removed: "Removed" },
+    comments: {
+      comment: "Comment", placeholder: "Write a comment…", hint: "Ctrl+Enter to save",
+      save: "Save", cancel: "Cancel", edit: "Edit", remove: "Delete",
+      copy: "Copy comments", copied: "Copied", copyFailed: "Copy failed",
+      copyEmpty: "No comments yet. Hover a block, or select text, to add one.",
+      selected: "Selected text", locTitle: "Title", locSummary: "Summary",
+      locParagraph: "Paragraph", locItem: "Item", locDiagram: "Diagram",
+    },
   },
 };
 
@@ -713,7 +729,7 @@ async function render(manifestPath: string) {
     FLOWS_SECTION: flowsSection,
     FILE_STORE: escJson(store),
     CONCEPTS: escJson(concepts),
-    UI: escJson({ viewFile: t.viewFile, plain: t.plain }),
+    UI: escJson({ viewFile: t.viewFile, plain: t.plain, name, title: manifest.title ?? "", comments: t.comments }),
   };
 
   const bundle = await clientBundle();
